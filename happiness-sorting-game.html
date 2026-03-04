@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Happiness Sorting Game 🌟</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --quick: #FF6B6B;
+    --quick-light: #FFE5E5;
+    --quick-dark: #E84545;
+    --lasting: #4ECDC4;
+    --lasting-light: #E0F7F6;
+    --lasting-dark: #2EA89F;
+    --bg: #FFF9F0;
+    --card-bg: #FFFFFF;
+    --text: #2D2D2D;
+    --yellow: #FFD93D;
+    --purple: #A78BFA;
+    --green: #6BCB77;
+    --orange: #FF9F43;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Nunito', sans-serif;
+    background: var(--bg);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Floating background shapes */
+  .bg-shapes {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    overflow: hidden;
+  }
+  .shape {
+    position: absolute;
+    border-radius: 50%;
+    opacity: 0.07;
+    animation: float 8s ease-in-out infinite;
+  }
+  .shape:nth-child(1) { width: 300px; height: 300px; background: var(--quick); top: -80px; left: -80px; animation-delay: 0s; }
+  .shape:nth-child(2) { width: 200px; height: 200px; background: var(--lasting); top: 20%; right: -60px; animation-delay: 2s; }
+  .shape:nth-child(3) { width: 150px; height: 150px; background: var(--yellow); bottom: 15%; left: 5%; animation-delay: 4s; }
+  .shape:nth-child(4) { width: 250px; height: 250px; background: var(--purple); bottom: -60px; right: 10%; animation-delay: 1s; }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0px) rotate(0deg); }
+    50% { transform: translateY(-20px) rotate(5deg); }
+  }
+
+  /* Header */
+  header {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+    padding: 28px 20px 12px;
+  }
+  header h1 {
+    font-family: 'Fredoka One', cursive;
+    font-size: clamp(2rem, 5vw, 3.2rem);
+    background: linear-gradient(135deg, var(--quick), var(--purple), var(--lasting));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    line-height: 1.1;
+  }
+  header p {
+    font-size: clamp(0.9rem, 2vw, 1.1rem);
+    color: #666;
+    margin-top: 6px;
+    font-weight: 600;
+  }
+
+  /* Game area */
+  .game-container {
+    position: relative;
+    z-index: 1;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 10px 16px 40px;
+  }
+
+  /* Cards tray */
+  .tray-label {
+    font-family: 'Fredoka One', cursive;
+    font-size: 1.2rem;
+    text-align: center;
+    color: #888;
+    margin-bottom: 10px;
+    letter-spacing: 1px;
+  }
+
+  .cards-tray {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: center;
+    min-height: 120px;
+    background: rgba(255,255,255,0.7);
+    border: 3px dashed #DDD;
+    border-radius: 24px;
+    padding: 16px;
+    margin-bottom: 24px;
+    transition: background 0.3s, border-color 0.3s;
+  }
+  .cards-tray.drag-over {
+    background: rgba(255,255,200,0.6);
+    border-color: var(--yellow);
+  }
+  .cards-tray.empty-tray {
+    align-items: center;
+    justify-content: center;
+  }
+  .tray-empty-msg {
+    color: #BBB;
+    font-size: 1rem;
+    font-weight: 700;
+  }
+
+  /* Drop zones */
+  .zones {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+
+  .zone {
+    border-radius: 24px;
+    padding: 16px;
+    min-height: 200px;
+    transition: transform 0.2s, box-shadow 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+  .zone::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    opacity: 0.08;
+    border-radius: 24px;
+  }
+  .zone.quick-zone {
+    background: var(--quick-light);
+    border: 3px solid var(--quick);
+  }
+  .zone.quick-zone::before { background: var(--quick); }
+  .zone.lasting-zone {
+    background: var(--lasting-light);
+    border: 3px solid var(--lasting);
+  }
+  .zone.lasting-zone::before { background: var(--lasting); }
+
+  .zone.drag-over {
+    transform: scale(1.02);
+    box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+  }
+  .zone.quick-zone.drag-over { border-color: var(--quick-dark); background: #FFD0D0; }
+  .zone.lasting-zone.drag-over { border-color: var(--lasting-dark); background: #C0EFED; }
+
+  .zone-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .zone-icon {
+    font-size: 2rem;
+    line-height: 1;
+  }
+  .zone-title {
+    font-family: 'Fredoka One', cursive;
+    font-size: clamp(1.1rem, 2.5vw, 1.5rem);
+    line-height: 1.1;
+  }
+  .quick-zone .zone-title { color: var(--quick-dark); }
+  .lasting-zone .zone-title { color: var(--lasting-dark); }
+  .zone-subtitle {
+    font-size: 0.78rem;
+    font-weight: 700;
+    opacity: 0.7;
+    display: block;
+    margin-top: 2px;
+  }
+
+  .zone-cards {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    min-height: 60px;
+  }
+
+  /* Happy Cards */
+  .happy-card {
+    background: white;
+    border-radius: 18px;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    cursor: grab;
+    user-select: none;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    transition: transform 0.18s, box-shadow 0.18s;
+    width: 110px;
+    text-align: center;
+    border: 2px solid transparent;
+    position: relative;
+  }
+  .happy-card:hover {
+    transform: translateY(-4px) rotate(-1deg);
+    box-shadow: 0 10px 24px rgba(0,0,0,0.15);
+  }
+  .happy-card:active, .happy-card.dragging {
+    cursor: grabbing;
+    transform: scale(1.08) rotate(2deg);
+    box-shadow: 0 16px 40px rgba(0,0,0,0.2);
+    z-index: 100;
+    opacity: 0.9;
+  }
+  .happy-card .card-emoji {
+    font-size: 2.4rem;
+    line-height: 1;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+  }
+  .happy-card .card-label {
+    font-size: 0.72rem;
+    font-weight: 800;
+    color: var(--text);
+    line-height: 1.2;
+  }
+
+  /* Card colors by type */
+  .card-candy    { border-color: #FFB3BA; background: linear-gradient(135deg, #fff, #FFF0F2); }
+  .card-toys     { border-color: #FFD0A0; background: linear-gradient(135deg, #fff, #FFF5EA); }
+  .card-friends  { border-color: #A8E6CF; background: linear-gradient(135deg, #fff, #F0FFF8); }
+  .card-helping  { border-color: #FFD700; background: linear-gradient(135deg, #fff, #FFFBEA); }
+  .card-drawing  { border-color: #C9B1FF; background: linear-gradient(135deg, #fff, #F8F4FF); }
+  .card-winning  { border-color: #FFB347; background: linear-gradient(135deg, #fff, #FFF6EA); }
+  .card-hug      { border-color: #FF8FAB; background: linear-gradient(135deg, #fff, #FFF0F5); }
+  .card-tv       { border-color: #AED9FF; background: linear-gradient(135deg, #fff, #F0F8FF); }
+  .card-icecream { border-color: #FFCCE0; background: linear-gradient(135deg, #fff, #FFF4F9); }
+  .card-gaming   { border-color: #B0D4FF; background: linear-gradient(135deg, #fff, #EEF6FF); }
+  .card-singing  { border-color: #FFE0A0; background: linear-gradient(135deg, #fff, #FFFBF0); }
+  .card-reading  { border-color: #C8E6C9; background: linear-gradient(135deg, #fff, #F1FFF2); }
+  .card-nature   { border-color: #ABEBC6; background: linear-gradient(135deg, #fff, #EDFFF5); }
+  .card-money    { border-color: #C8F7A0; background: linear-gradient(135deg, #fff, #F5FFF0); }
+  .card-dancing  { border-color: #F9A8D4; background: linear-gradient(135deg, #fff, #FFF0FA); }
+  .card-sharing  { border-color: #FDE68A; background: linear-gradient(135deg, #fff, #FFFBEA); }
+  .card-sleeping { border-color: #BAB9FF; background: linear-gradient(135deg, #fff, #F4F4FF); }
+  .card-cooking  { border-color: #FCA5A5; background: linear-gradient(135deg, #fff, #FFF5F5); }
+  .card-sport    { border-color: #6EE7B7; background: linear-gradient(135deg, #fff, #F0FFF9); }
+  .card-photo    { border-color: #93C5FD; background: linear-gradient(135deg, #fff, #F0F6FF); }
+  .card-building { border-color: #FCD34D; background: linear-gradient(135deg, #fff, #FFFCF0); }
+
+  /* Selected card highlight */
+  .happy-card.selected {
+    outline: 3px solid #667eea;
+    transform: translateY(-4px) scale(1.05);
+    box-shadow: 0 12px 28px rgba(102,126,234,0.3);
+  }
+
+  /* Round badge */
+  .round-badge {
+    display: inline-block;
+    background: linear-gradient(135deg, var(--quick), var(--lasting));
+    color: white;
+    font-family: 'Fredoka One', cursive;
+    font-size: 0.85rem;
+    border-radius: 50px;
+    padding: 3px 14px;
+    margin-left: 10px;
+    vertical-align: middle;
+  }
+
+  /* Sorted badge */
+  .sorted-badge {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    font-size: 0.9rem;
+    background: white;
+    border-radius: 50%;
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  }
+
+  /* Discuss Section */
+  .discuss-section {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    border-radius: 28px;
+    padding: 28px;
+    color: white;
+    margin-bottom: 24px;
+    box-shadow: 0 8px 30px rgba(102,126,234,0.3);
+    display: none;
+  }
+  .discuss-section.visible { display: block; animation: slideUp 0.5s ease; }
+
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .discuss-section h2 {
+    font-family: 'Fredoka One', cursive;
+    font-size: clamp(1.4rem, 3vw, 2rem);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .discuss-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+  .discuss-box {
+    background: rgba(255,255,255,0.15);
+    border-radius: 16px;
+    padding: 16px;
+    backdrop-filter: blur(4px);
+  }
+  .discuss-box h3 {
+    font-family: 'Fredoka One', cursive;
+    font-size: 1.1rem;
+    margin-bottom: 10px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .discuss-box ul {
+    list-style: none;
+    padding: 0;
+  }
+  .discuss-box ul li {
+    font-size: 0.85rem;
+    font-weight: 700;
+    padding: 4px 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .discuss-box ul li::before {
+    content: '→';
+    opacity: 0.7;
+  }
+
+  .questions-box {
+    background: rgba(255,255,255,0.12);
+    border-radius: 16px;
+    padding: 18px;
+  }
+  .questions-box h3 {
+    font-family: 'Fredoka One', cursive;
+    font-size: 1.2rem;
+    margin-bottom: 12px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .questions-box ol {
+    padding-left: 20px;
+  }
+  .questions-box ol li {
+    font-size: 0.9rem;
+    font-weight: 700;
+    padding: 5px 0;
+    line-height: 1.4;
+  }
+
+  .key-insight {
+    background: rgba(255,255,255,0.2);
+    border-radius: 14px;
+    padding: 14px 18px;
+    margin-top: 16px;
+    font-size: 0.92rem;
+    font-weight: 700;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    line-height: 1.5;
+  }
+  .key-insight span:first-child { font-size: 1.4rem; flex-shrink: 0; }
+
+  /* Buttons */
+  .btn-row {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+
+  .btn {
+    font-family: 'Fredoka One', cursive;
+    font-size: 1.1rem;
+    border: none;
+    border-radius: 50px;
+    padding: 12px 28px;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  }
+  .btn:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.2); }
+  .btn:active { transform: translateY(0px); }
+
+  .btn-check {
+    background: linear-gradient(135deg, var(--yellow), var(--orange));
+    color: white;
+  }
+  .btn-reset {
+    background: linear-gradient(135deg, #E0E0E0, #CACACA);
+    color: #555;
+  }
+  .btn-discuss {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+  }
+
+  /* Score banner */
+  .score-banner {
+    text-align: center;
+    font-family: 'Fredoka One', cursive;
+    font-size: 1.4rem;
+    padding: 12px 24px;
+    border-radius: 50px;
+    display: none;
+    margin-bottom: 16px;
+    animation: pop 0.4s ease;
+  }
+  .score-banner.visible { display: inline-block; }
+  .score-banner.great { background: linear-gradient(135deg, #6BCB77, #4CAF50); color: white; }
+  .score-banner.ok { background: linear-gradient(135deg, #FFD93D, #FF9F43); color: white; }
+
+  @keyframes pop {
+    0% { transform: scale(0.7); opacity: 0; }
+    70% { transform: scale(1.08); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+
+  /* Progress indicator */
+  .progress-row {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .progress-text {
+    font-weight: 800;
+    font-size: 0.9rem;
+    color: #888;
+  }
+  .progress-bar-wrap {
+    background: #EEE;
+    border-radius: 50px;
+    height: 10px;
+    width: 180px;
+    overflow: hidden;
+  }
+  .progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--quick), var(--lasting));
+    border-radius: 50px;
+    transition: width 0.5s ease;
+  }
+
+  /* Touch feedback */
+  .touch-hint {
+    text-align: center;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #AAA;
+    margin-bottom: 8px;
+  }
+
+  /* Confetti */
+  .confetti-piece {
+    position: fixed;
+    width: 10px;
+    height: 10px;
+    top: -20px;
+    animation: confettiFall linear forwards;
+    z-index: 999;
+    pointer-events: none;
+    border-radius: 2px;
+  }
+  @keyframes confettiFall {
+    to { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+  }
+
+  @media (max-width: 600px) {
+    .zones { grid-template-columns: 1fr; }
+    .discuss-grid { grid-template-columns: 1fr; }
+    .happy-card { width: 95px; padding: 10px; }
+    .happy-card .card-emoji { font-size: 2rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="bg-shapes">
+  <div class="shape"></div>
+  <div class="shape"></div>
+  <div class="shape"></div>
+  <div class="shape"></div>
+</div>
+
+<header>
+  <h1>🌟 Happiness Sorter 🌟</h1>
+  <p>Drag each card into the right bucket — then let's talk about why!</p>
+</header>
+
+<div class="game-container">
+
+  <!-- Progress -->
+  <div class="progress-row">
+    <span class="progress-text" id="progressText">0 / 8 sorted</span>
+    <div class="progress-bar-wrap">
+      <div class="progress-bar" id="progressBar" style="width:0%"></div>
+    </div>
+  </div>
+
+  <p class="touch-hint">👆 Drag the cards below — or tap a card then tap a bucket!</p>
+
+  <!-- Cards Tray -->
+  <div class="tray-label">🎴 YOUR CARDS <span class="round-badge" id="roundBadge">Round 1</span></div>
+  <div class="cards-tray" id="tray" data-zone="tray"></div>
+
+  <!-- Drop Zones -->
+  <div class="zones">
+    <div class="zone quick-zone" id="zone-quick" data-zone="quick">
+      <div class="zone-header">
+        <div class="zone-icon">⚡</div>
+        <div class="zone-title">
+          Quick Happy
+          <span class="zone-subtitle">Feels great right now!</span>
+        </div>
+      </div>
+      <div class="zone-cards" id="cards-quick"></div>
+    </div>
+    <div class="zone lasting-zone" id="zone-lasting" data-zone="lasting">
+      <div class="zone-header">
+        <div class="zone-icon">💎</div>
+        <div class="zone-title">
+          Long-Lasting Happy
+          <span class="zone-subtitle">Makes you happy for longer!</span>
+        </div>
+      </div>
+      <div class="zone-cards" id="cards-lasting"></div>
+    </div>
+  </div>
+
+  <!-- Buttons -->
+  <div class="btn-row">
+    <button class="btn btn-check" onclick="checkAnswers()">✅ Check My Answers!</button>
+    <button class="btn btn-discuss" onclick="showDiscuss()">💬 Let's Discuss!</button>
+    <button class="btn btn-reset" onclick="resetGame()">🔀 New Round!</button>
+  </div>
+
+  <!-- Score Banner -->
+  <div style="text-align:center;">
+    <div class="score-banner" id="scoreBanner"></div>
+  </div>
+
+  <!-- Discussion Section -->
+  <div class="discuss-section" id="discussSection">
+    <h2>💬 Let's Talk About It!</h2>
+    <div class="discuss-grid">
+      <div class="discuss-box">
+        <h3>⚡ Quick Happy Things</h3>
+        <ul id="discussQuickList"></ul>
+      </div>
+      <div class="discuss-box">
+        <h3>💎 Long-Lasting Happy Things</h3>
+        <ul id="discussLastingList"></ul>
+      </div>
+    </div>
+
+    <div class="discuss-box" id="discussEitherBox" style="margin-top:12px;">
+      <h3>🤔 Could Be Either!</h3>
+      <ul id="discussEitherList"></ul>
+    </div>
+
+    <div class="questions-box" style="margin-top:16px;">
+      <h3>🗣️ Questions to Think About...</h3>
+      <ol>
+        <li>Which ones made you feel happy the <strong>longest</strong>? Why do you think that is?</li>
+        <li>Can you think of other things that give you <em>quick</em> happy feelings?</li>
+        <li>Why might helping someone else make <em>you</em> feel good?</li>
+        <li>Is quick happy bad? Or is there room for both kinds?</li>
+        <li>What's the happiest you've ever felt — and how long did it last?</li>
+      </ol>
+    </div>
+
+    <div class="key-insight">
+      <span>💡</span>
+      <span>Both kinds of happiness are real and important! Scientists who study happiness have found that things like <strong>friendship, kindness, and creativity</strong> tend to make people happy for longer — because they give us a sense of meaning and connection, not just a quick buzz. That doesn't mean candy isn't yummy though! 🍬😄</span>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // ── Full card pool ──────────────────────────────────────────────────────────
+  const ALL_CARDS = [
+    // Quick happy
+    { id: 'candy',    emoji: '🍬', label: 'Candy',             colorClass: 'card-candy',   answer: 'quick'   },
+    { id: 'winning',  emoji: '🏆', label: 'Winning a Prize',   colorClass: 'card-winning', answer: 'quick'   },
+    { id: 'tv',       emoji: '📺', label: 'Watching TV',       colorClass: 'card-tv',      answer: 'quick'   },
+    { id: 'icecream', emoji: '🍦', label: 'Ice Cream',         colorClass: 'card-icecream',answer: 'quick'   },
+    { id: 'money',    emoji: '💰', label: 'Getting Money',     colorClass: 'card-money',   answer: 'quick'   },
+    { id: 'gaming',   emoji: '🎮', label: 'Playing Video Games',colorClass: 'card-gaming', answer: 'quick'   },
+    // Long-lasting happy
+    { id: 'friends',  emoji: '👫', label: 'Playing with Friends',colorClass: 'card-friends',answer: 'lasting' },
+    { id: 'helping',  emoji: '🤝', label: 'Helping Someone',   colorClass: 'card-helping', answer: 'lasting' },
+    { id: 'drawing',  emoji: '🎨', label: 'Drawing',           colorClass: 'card-drawing', answer: 'lasting' },
+    { id: 'hug',      emoji: '🤗', label: 'Getting a Hug',     colorClass: 'card-hug',     answer: 'lasting' },
+    { id: 'reading',  emoji: '📚', label: 'Reading a Great Book',colorClass: 'card-reading',answer: 'lasting' },
+    { id: 'nature',   emoji: '🌳', label: 'Playing Outside',   colorClass: 'card-nature',  answer: 'lasting' },
+    { id: 'singing',  emoji: '🎵', label: 'Singing & Music',   colorClass: 'card-singing', answer: 'lasting' },
+    { id: 'sharing',  emoji: '🎁', label: 'Sharing with Others',colorClass: 'card-sharing',answer: 'lasting' },
+    { id: 'cooking',  emoji: '🍳', label: 'Cooking Together',  colorClass: 'card-cooking', answer: 'lasting' },
+    { id: 'sport',    emoji: '⚽', label: 'Playing Sport',     colorClass: 'card-sport',   answer: 'lasting' },
+    { id: 'building', emoji: '🧱', label: 'Building Something',colorClass: 'card-building',answer: 'lasting' },
+    { id: 'dancing',  emoji: '💃', label: 'Dancing',           colorClass: 'card-dancing', answer: 'lasting' },
+    // Either (discussion cards)
+    { id: 'toys',     emoji: '🧸', label: 'Getting New Toys',  colorClass: 'card-toys',    answer: 'either'  },
+    { id: 'sleeping', emoji: '😴', label: 'A Good Sleep',      colorClass: 'card-sleeping',answer: 'either'  },
+    { id: 'photo',    emoji: '📸', label: 'Taking Photos',     colorClass: 'card-photo',   answer: 'either'  },
+  ];
+
+  const ROUND_SIZE = 8;
+  let round = 1;
+  let activeCards = [];      // the 8 picked for this round
+  let cardLocations = {};    // cardId -> 'tray' | 'quick' | 'lasting'
+  let selectedCard = null;
+  let draggedCard = null;
+
+  // ── Pick a balanced random set of 8 ────────────────────────────────────────
+  function pickCards() {
+    const quick   = shuffle(ALL_CARDS.filter(c => c.answer === 'quick'));
+    const lasting = shuffle(ALL_CARDS.filter(c => c.answer === 'lasting'));
+    const either  = shuffle(ALL_CARDS.filter(c => c.answer === 'either'));
+    // 3 quick, 4 lasting, 1 either — always a good mix
+    const picked  = [...quick.slice(0,3), ...lasting.slice(0,4), ...either.slice(0,1)];
+    return shuffle(picked);
+  }
+
+  function shuffle(arr) {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  // ── Init / new round ────────────────────────────────────────────────────────
+  function initGame(newRound = 1) {
+    round = newRound;
+    activeCards = pickCards();
+    cardLocations = {};
+    activeCards.forEach(c => cardLocations[c.id] = 'tray');
+    document.getElementById('roundBadge').textContent = `Round ${round}`;
+    document.getElementById('scoreBanner').className = 'score-banner';
+    document.getElementById('discussSection').classList.remove('visible');
+    selectedCard = null;
+    draggedCard = null;
+    renderAll();
+    buildDiscussSection();
+  }
+
+  // ── Render ──────────────────────────────────────────────────────────────────
+  function renderAll() {
+    const tray        = document.getElementById('tray');
+    const quickCards  = document.getElementById('cards-quick');
+    const lastingCards= document.getElementById('cards-lasting');
+
+    tray.innerHTML = '';
+    quickCards.innerHTML = '';
+    lastingCards.innerHTML = '';
+
+    let sorted = 0;
+    activeCards.forEach(c => {
+      const el  = makeCard(c);
+      const loc = cardLocations[c.id];
+      if (loc === 'tray')    tray.appendChild(el);
+      else if (loc === 'quick')   { quickCards.appendChild(el);   sorted++; }
+      else if (loc === 'lasting') { lastingCards.appendChild(el); sorted++; }
+    });
+
+    const total = activeCards.length;
+    document.getElementById('progressText').textContent = `${sorted} / ${total} sorted`;
+    document.getElementById('progressBar').style.width  = `${(sorted/total)*100}%`;
+
+    if ([...tray.children].length === 0) {
+      tray.innerHTML = '<span class="tray-empty-msg">All cards sorted! 🎉</span>';
+    }
+
+    // Re-attach drop zone listeners after render
+    setupDropZones();
+  }
+
+  // ── Card element ────────────────────────────────────────────────────────────
+  function makeCard(c) {
+    const el = document.createElement('div');
+    el.className = `happy-card ${c.colorClass}`;
+    if (selectedCard === c.id) el.classList.add('selected');
+    el.dataset.id = c.id;
+    el.draggable = true;
+    el.innerHTML = `<span class="card-emoji">${c.emoji}</span><span class="card-label">${c.label}</span>`;
+
+    // ── Mouse drag ──
+    el.addEventListener('dragstart', e => {
+      draggedCard = c.id;
+      setTimeout(() => el.classList.add('dragging'), 0);
+    });
+    el.addEventListener('dragend', () => {
+      el.classList.remove('dragging');
+      draggedCard = null;
+      document.querySelectorAll('.drag-over').forEach(z => z.classList.remove('drag-over'));
+    });
+
+    // ── Touch drag (iPad) ──
+    let touchClone = null;
+    let touchOffsetX = 0, touchOffsetY = 0;
+
+    el.addEventListener('touchstart', e => {
+      const t = e.touches[0];
+      const rect = el.getBoundingClientRect();
+      touchOffsetX = t.clientX - rect.left;
+      touchOffsetY = t.clientY - rect.top;
+
+      touchClone = el.cloneNode(true);
+      touchClone.style.cssText = `
+        position:fixed; pointer-events:none; z-index:9999; opacity:0.85;
+        width:${rect.width}px; transform:scale(1.08) rotate(2deg);
+        box-shadow:0 16px 40px rgba(0,0,0,0.25);
+        left:${t.clientX - touchOffsetX}px; top:${t.clientY - touchOffsetY}px;
+        transition:none;
+      `;
+      document.body.appendChild(touchClone);
+      el.style.opacity = '0.3';
+      draggedCard = c.id;
+    }, { passive: true });
+
+    el.addEventListener('touchmove', e => {
+      e.preventDefault();
+      const t = e.touches[0];
+      if (touchClone) {
+        touchClone.style.left = `${t.clientX - touchOffsetX}px`;
+        touchClone.style.top  = `${t.clientY - touchOffsetY}px`;
+      }
+      // Highlight drop zone under finger
+      document.querySelectorAll('.zone, .cards-tray').forEach(z => z.classList.remove('drag-over'));
+      const below = document.elementFromPoint(t.clientX, t.clientY);
+      const zone  = below && (below.closest('.zone') || below.closest('.cards-tray'));
+      if (zone) zone.classList.add('drag-over');
+    }, { passive: false });
+
+    el.addEventListener('touchend', e => {
+      const t = e.changedTouches[0];
+      if (touchClone) { touchClone.remove(); touchClone = null; }
+      el.style.opacity = '';
+      document.querySelectorAll('.drag-over').forEach(z => z.classList.remove('drag-over'));
+
+      const below   = document.elementFromPoint(t.clientX, t.clientY);
+      const zone    = below && (below.closest('[data-zone]'));
+      const zoneId  = zone && zone.dataset.zone;
+      if (zoneId && draggedCard) {
+        cardLocations[draggedCard] = zoneId;
+        selectedCard = null;
+        draggedCard  = null;
+        renderAll();
+      } else {
+        draggedCard = null;
+        // Fall through to tap handler
+        handleCardTap(c.id);
+      }
+    }, { passive: true });
+
+    // ── Tap ──
+    el.addEventListener('click', () => handleCardTap(c.id));
+
+    return el;
+  }
+
+  // ── Tap-to-sort ─────────────────────────────────────────────────────────────
+  function handleCardTap(cardId) {
+    if (selectedCard === cardId) {
+      selectedCard = null;
+    } else {
+      selectedCard = cardId;
+    }
+    renderAll();
+  }
+
+  // ── Drop zones ───────────────────────────────────────────────────────────────
+  function setupDropZones() {
+    document.querySelectorAll('[data-zone]').forEach(zone => {
+      // Remove old listeners by cloning
+      const fresh = zone.cloneNode(false);
+      while (zone.firstChild) fresh.appendChild(zone.firstChild);
+      zone.parentNode.replaceChild(fresh, zone);
+
+      fresh.addEventListener('dragover', e => { e.preventDefault(); fresh.classList.add('drag-over'); });
+      fresh.addEventListener('dragleave', () => fresh.classList.remove('drag-over'));
+      fresh.addEventListener('drop', e => {
+        e.preventDefault();
+        fresh.classList.remove('drag-over');
+        if (draggedCard) {
+          cardLocations[draggedCard] = fresh.dataset.zone;
+          draggedCard = selectedCard = null;
+          renderAll();
+        }
+      });
+      // Tap a zone to place selected card
+      fresh.addEventListener('click', e => {
+        if (selectedCard && !e.target.closest('.happy-card')) {
+          cardLocations[selectedCard] = fresh.dataset.zone;
+          selectedCard = null;
+          renderAll();
+        }
+      });
+    });
+  }
+
+  // ── Check answers ────────────────────────────────────────────────────────────
+  function checkAnswers() {
+    let correct = 0, total = 0;
+    activeCards.forEach(c => {
+      const loc = cardLocations[c.id];
+      if (loc === 'tray') return;
+      total++;
+      if (c.answer === 'either' || c.answer === loc) correct++;
+    });
+
+    if (total === 0) { showBanner("Sort some cards first! 😄", 'ok'); return; }
+
+    const n   = activeCards.length;
+    const pct = Math.round((correct / total) * 100);
+    let msg   = '';
+    if (total < n)     msg = `${correct}/${total} sorted correctly! Sort all ${n} to finish 🙂`;
+    else if (pct===100) msg = `🌟 Perfect! All ${correct}/${n} correct! Amazing!`;
+    else if (pct >= 60) msg = `Great thinking! ${correct}/${n} correct 👏`;
+    else                msg = `Keep going! ${correct}/${n} correct 💪`;
+
+    showBanner(msg, pct >= 70 ? 'great' : 'ok');
+    if (pct === 100 && total === n) launchConfetti();
+  }
+
+  // ── New round ────────────────────────────────────────────────────────────────
+  function resetGame() {
+    initGame(round + 1);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // ── Build discuss section dynamically from active cards ─────────────────────
+  function buildDiscussSection() {
+    const qCards = activeCards.filter(c => c.answer === 'quick');
+    const lCards = activeCards.filter(c => c.answer === 'lasting');
+    const eCards = activeCards.filter(c => c.answer === 'either');
+
+    const quickDescriptions = {
+      candy:'Sweet but gone in seconds!', winning:'Exciting, but the buzz fades fast.',
+      tv:'Fun while watching, forgotten after.', icecream:'Yummy but over quickly!',
+      money:'Gets you stuff, but not happiness itself.', gaming:'Thrilling in the moment!',
+      toys:'Exciting at first, then less so.', sleeping:'Feels great but it\'s a need, not lasting joy.'
+    };
+    const lastingDescriptions = {
+      friends:'Memories with friends stay forever!', helping:'Warm feeling inside that lasts.',
+      drawing:'Pride in something you created!', hug:'Feel loved, safe and connected.',
+      reading:'New ideas stay in your mind.', nature:'Boosts mood for hours!',
+      singing:'Music lifts your spirit all day.', sharing:'Giving feels better than getting.',
+      cooking:'Skills and memories you keep.', sport:'Fitness and team bonds last.',
+      building:'Pride in what you made!', dancing:'Energy and joy that linger.',
+      photo:'Memories captured forever!'
+    };
+    const eitherDescriptions = {
+      toys:'Can be quick excitement or a lasting hobby!',
+      sleeping:'A need AND a joy — both!',
+      photo:'A moment is quick, but photos last forever.'
+    };
+
+    const makeList = (cards, descs) => cards.map(c =>
+      `<li>${c.emoji} <strong>${c.label}</strong> — ${descs[c.id] || ''}</li>`).join('');
+
+    document.getElementById('discussQuickList').innerHTML   = makeList(qCards, quickDescriptions);
+    document.getElementById('discussLastingList').innerHTML = makeList(lCards, lastingDescriptions);
+
+    const eitherBox = document.getElementById('discussEitherBox');
+    if (eCards.length) {
+      eitherBox.style.display = '';
+      document.getElementById('discussEitherList').innerHTML = makeList(eCards, eitherDescriptions);
+    } else {
+      eitherBox.style.display = 'none';
+    }
+  }
+
+  function showBanner(msg, cls) {
+    const b = document.getElementById('scoreBanner');
+    b.textContent = msg;
+    b.className = `score-banner visible ${cls}`;
+  }
+
+  function showDiscuss() {
+    buildDiscussSection();
+    const d = document.getElementById('discussSection');
+    d.classList.add('visible');
+    d.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function launchConfetti() {
+    const colors = ['#FF6B6B','#4ECDC4','#FFD93D','#A78BFA','#6BCB77','#FF9F43'];
+    for (let i = 0; i < 90; i++) {
+      const piece = document.createElement('div');
+      piece.className = 'confetti-piece';
+      piece.style.cssText = `
+        left:${Math.random()*100}vw;
+        background:${colors[Math.floor(Math.random()*colors.length)]};
+        animation-duration:${1.5+Math.random()*2}s;
+        animation-delay:${Math.random()*1}s;
+        transform:rotate(${Math.random()*360}deg);
+        border-radius:${Math.random()>0.5?'50%':'2px'};
+      `;
+      document.body.appendChild(piece);
+      piece.addEventListener('animationend', () => piece.remove());
+    }
+  }
+
+  // ── Boot ─────────────────────────────────────────────────────────────────────
+  initGame(1);
+</script>
+</body>
+</html>
